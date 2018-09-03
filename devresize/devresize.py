@@ -17,11 +17,14 @@ import logging
 import commands
 import argparse
 import atexit
+import re
 
 BLKSSZGET = 0x1268
 BLKGETSIZE = 0x1260
 BLKRRPART = 0x125f
 BLKGETSIZE64 = 0x80041272
+NORMAL_DEVICE_NAME = r"\/dev\/\D+$"
+SPECITIAL_DEVICE_NAME = r"\/dev\/\D+\d$"
 
 logger = None
 
@@ -365,13 +368,19 @@ def check_mount(target_dev):  # target_dev is mounted!
         logger.error("Target partition %s must be unmounted." % target_dev)
         sys.exit(1)
 
+
 def part_probe(fd):
     """将写入文件的数据落到磁盘上"""
     if logger:
         logger.debug('part_probe')
     fd.flush()
     time.sleep(1)
-    fcntl.ioctl(fd, BLKRRPART)
+    ret = os.system("partprobe %s" % (fd.name))
+    if ret != 0:
+        logger.error("partprobe %s returned non-zero value %s" % (fd.name, ret))
+        sys.exit(1)
+    # fcntl.ioctl(fd, BLKRRPART)
+
 
 def write_mbr(fd, mbr_data):
     """将mbr数据写入文件"""
@@ -390,10 +399,19 @@ def check_permission(device):
 
 
 def check_args(device):
-    """检查设备名最后一个字符是否为数字"""
-    if device[-1].isdigit():
-        logger.error("The argument should be a whole disk, not a partation! Example: %s" % get_disk_path(device))
+    """检查传入的参数是否为设备名而不是分区名"""
+    exclude_devices = ["/dev/loop", "/dev/nbd"]
+    normal_device = True
+    for name in exclude_devices:
+        if device.startswith(name):
+            normal_device = False
+    if normal_device and not re.match(NORMAL_DEVICE_NAME, device):
+        logger.error("The argument should be a whole disk, not a partition! Example: /dev/vdb")
         sys.exit(1)
+    elif not normal_device and not re.match(SPECITIAL_DEVICE_NAME, device):
+        logger.error("The argument should be a whole disk, not a partition! Example: /dev/loop1")
+        sys.exit(1)
+    
 
 
 def check_partition_need_resize(target_partition):
@@ -410,13 +428,13 @@ def check_mbr(device):
         sys.exit(1)
 
 
-def get_disk_path(partation_name):
-    """从分区名解析出块设备名"""
-    for i, ch in enumerate(os.path.basename(partation_name)[::-1]):
-        if not ch.isdigit():
-            return partation_name[::-1][i::][::-1]
-    logger.error("invalid para %s" % partation_name)
-    raise Exception("invalid para %s" % partation_name)
+# def get_disk_path(partation_name):
+#     """从*分区名*解析出块设备名"""    
+#     for i, ch in enumerate(os.path.basename(partation_name)[::-1]):
+#         if not ch.isdigit():
+#             return partation_name[::-1][i::][::-1]
+#     logger.error("invalid para %s" % partation_name)
+#     raise Exception("invalid para %s" % partation_name)
 
 
 def closefd(fd):
