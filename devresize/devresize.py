@@ -428,6 +428,15 @@ def check_mbr(device):
         sys.exit(1)
 
 
+def check_commands(command_list=[]):
+    """检查运行环境和工具是否支持"""
+    for cmd in command_list:
+        ret, _ = commands.getstatusoutput("which %s" % cmd)
+        if ret:
+            logger.error("%s: command not found" % cmd)
+            sys.exit(1)
+
+    
 # def get_disk_path(partation_name):
 #     """从*分区名*解析出块设备名"""    
 #     for i, ch in enumerate(os.path.basename(partation_name)[::-1]):
@@ -467,6 +476,8 @@ def main():
 
     check_permission(device)
 
+    check_commands(["parted", "partprobe", "blkid"])
+
     check_mbr(device)
 
     fd = open(device, 'r+')
@@ -482,6 +493,11 @@ def main():
     target_partition, resize_part_flag = check_partition(device, mbr)
     
     fstype = check_format(target_partition)
+
+    if is_ext_fs(fstype):
+        check_commands(["resize2fs", "e2fsck", "tune2fs"])
+    else:
+        check_commands(["xfs_growfs", "xfs_repair", "xfs_info"])
 
     check_mount(target_partition)
         
