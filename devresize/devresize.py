@@ -499,6 +499,9 @@ def main():
     else:
         check_commands(["xfs_growfs", "xfs_repair", "xfs_info"])
 
+    time.sleep(1)
+    umount_fs(target_partition)
+
     check_mount(target_partition)
         
     check_fs_healthy(target_partition, fstype)

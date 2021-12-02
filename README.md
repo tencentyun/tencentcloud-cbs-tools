@@ -23,3 +23,7 @@
 [云硬盘售前常见问题](https://cloud.tencent.com/document/product/362/17818)
 
 [腾讯云API SDK for Python](https://github.com/TencentCloud/tencentcloud-sdk-python)
+
+[本工程GitHub链接](https://github.com/tencentyun/tencentcloud-cbs-tools)
+
+[本工程Coding链接](https://tencentcloud.coding.net/public/tencentcloud/tencentcloud-cbs-tools/git/files)
